@@ -149,23 +149,31 @@ var PdfViewerComponent = (function () {
             var canvas = document.createElement('canvas');
             var div = document.createElement('div');
             if (!_this._originalSize) {
+
                 viewport = page.getViewport(_this.element.nativeElement.offsetWidth / viewport.width, _this._rotation);
             }
             if (!_this._showAll) {
                 _this.removeAllChildNodes(container);
             }
             div.appendChild(canvas);
-            container.appendChild(div);
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-            page.render({
-                canvasContext: canvas.getContext('2d'),
-                viewport: viewport
-            });
-            if (_this._renderText) {
-                _this.renderPageOverlay(page, viewport, container);
-            }
-        });
+            //            container.appendChild(div);
+
+            // Set dimensions
+            container.style.width = viewport.width + 'px';
+            container.style.height = viewport.height + 'px';
+
+            // SVG rendering by PDF.js
+            page.getOperatorList()
+                .then(function (opList) {
+                    var svgGfx = new window.PDFJS.SVGGraphics(page.commonObjs, page.objs);
+
+                    return svgGfx.getSVG(opList, viewport);
+                })
+                .then(function (svg) {
+                    container.appendChild(svg);
+                });
+            return;
+        })
     };
     PdfViewerComponent.prototype.removeAllChildNodes = function (element) {
         while (element.firstChild) {
