@@ -106,8 +106,9 @@ var PdfViewerComponent = (function () {
         this.removeAllChildNodes(container);
         var max = 5;
         var page = 1;
-        while (page <= this._pdf.numPages && this._pdf.numPages <= max) {
+        while (page <= this._pdf.numPages && page <= max) {
             this.renderPage(page);
+            page++;
         }
         // for (var page = 1; page <= this._pdf.numPages; page++) {
         //     this.renderPage(page);
