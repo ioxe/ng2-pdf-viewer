@@ -104,9 +104,14 @@ var PdfViewerComponent = (function () {
     PdfViewerComponent.prototype.renderMultiplePages = function () {
         var container = this.element.nativeElement.querySelector('div');
         this.removeAllChildNodes(container);
-        for (var page = 1; page <= this._pdf.numPages; page++) {
+        var max = 5;
+        var page = 1;
+        while (page <= this._pdf.numPages && this._pdf.numPages <= max) {
             this.renderPage(page);
         }
+        // for (var page = 1; page <= this._pdf.numPages; page++) {
+        //     this.renderPage(page);
+        // }
     };
     PdfViewerComponent.prototype.isValidPageNumber = function (page) {
         return this._pdf.numPages >= page && page >= 1;
@@ -183,15 +188,19 @@ var PdfViewerComponent = (function () {
     return PdfViewerComponent;
 }());
 PdfViewerComponent.decorators = [
-    { type: core_1.Component, args: [{
-                selector: 'pdf-viewer',
-                template: "<div class=\"ng2-pdf-viewer-container\" [ngClass]=\"{'ng2-pdf-viewer--zoom': zoom < 1}\"></div>",
-                styles: ["\n.ng2-pdf-viewer--zoom {\n  overflow-x: scroll;\n}\n\n:host >>> .ng2-pdf-viewer-container > div {\n  position: relative;\n  z-index: 0;\n}\n\n:host >>> .textLayer {\n  font-family: sans-serif;\n  overflow: hidden;\n}\n  "]
-            },] },
+    {
+        type: core_1.Component, args: [{
+            selector: 'pdf-viewer',
+            template: "<div class=\"ng2-pdf-viewer-container\" [ngClass]=\"{'ng2-pdf-viewer--zoom': zoom < 1}\"></div>",
+            styles: ["\n.ng2-pdf-viewer--zoom {\n  overflow-x: scroll;\n}\n\n:host >>> .ng2-pdf-viewer-container > div {\n  position: relative;\n  z-index: 0;\n}\n\n:host >>> .textLayer {\n  font-family: sans-serif;\n  overflow: hidden;\n}\n  "]
+        },]
+    },
 ];
-PdfViewerComponent.ctorParameters = function () { return [
-    { type: core_1.ElementRef, },
-]; };
+PdfViewerComponent.ctorParameters = function () {
+    return [
+        { type: core_1.ElementRef, },
+    ];
+};
 PdfViewerComponent.propDecorators = {
     'afterLoadComplete': [{ type: core_1.Output, args: ['after-load-complete',] },],
     'src': [{ type: core_1.Input },],
