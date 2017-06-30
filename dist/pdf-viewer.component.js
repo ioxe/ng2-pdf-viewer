@@ -166,6 +166,7 @@ var PdfViewerComponent = (function () {
             // Set dimensions
             container.style.width = viewport.width + 'px';
             container.style.height = viewport.height + 'px';
+            container.style.background = '#fff';
 
             // SVG rendering by PDF.js
             page.getOperatorList()
