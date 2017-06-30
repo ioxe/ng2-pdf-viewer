@@ -143,6 +143,7 @@ var PdfViewerComponent = (function () {
             var canvas = container.querySelectorAll('canvas')[index];
             canvas.parentNode.insertBefore(_this.buildSVG(viewport, textContent), canvas);
             canvas.style.position = 'absolute';
+            canvas.style.background = '#fff';
             canvas.style.top = '0';
             canvas.style.left = '0';
             canvas.style.zIndex = '-1';
