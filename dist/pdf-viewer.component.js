@@ -120,6 +120,7 @@ var PdfViewerComponent = (function () {
     PdfViewerComponent.prototype.buildSVG = function (viewport, textContent) {
         var SVG_NS = 'http://www.w3.org/2000/svg';
         var svg = document.createElementNS(SVG_NS, 'svg:svg');
+        svg.setAttribute('background', '#fff');
         svg.setAttribute('width', viewport.width + 'px');
         svg.setAttribute('height', viewport.height + 'px');
         svg.setAttribute('font-size', '1');
@@ -167,7 +168,6 @@ var PdfViewerComponent = (function () {
             // Set dimensions
             container.style.width = viewport.width + 'px';
             container.style.height = viewport.height + 'px';
-            container.style.background = '#fff';
 
             // SVG rendering by PDF.js
             page.getOperatorList()
