@@ -105,14 +105,20 @@ var PdfViewerComponent = (function () {
         var container = this.element.nativeElement.querySelector('div');
         this.removeAllChildNodes(container);
         var max = 5;
-        var page = 1;
-        while (page <= this._pdf.numPages && page <= max) {
-            this.renderPage(page);
-            page++;
+        var p = Promise.resolve(null);
+
+        if (this._pdf.numPages < max) {
+            max = this._pdf.numPages;
         }
-        // for (var page = 1; page <= this._pdf.numPages; page++) {
-        //     this.renderPage(page);
-        // }
+
+        for (var page = 1; page <= max; page++) {
+            ((pno) => {
+                p = p.then(() => {
+                    return this.renderPage(pno)
+                });
+            })(page)
+        }
+        return p;
     };
     PdfViewerComponent.prototype.isValidPageNumber = function (page) {
         return this._pdf.numPages >= page && page >= 1;
