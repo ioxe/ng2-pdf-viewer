@@ -177,7 +177,7 @@ var PdfViewerComponent = (function () {
             container.style.height = viewport.height + 'px';
 
             // SVG rendering by PDF.js
-            page.getOperatorList()
+            return page.getOperatorList()
                 .then(function (opList) {
                     var svgGfx = new window.PDFJS.SVGGraphics(page.commonObjs, page.objs);
 
@@ -186,7 +186,6 @@ var PdfViewerComponent = (function () {
                 .then(function (svg) {
                     container.appendChild(svg);
                 });
-            return;
         })
     };
     PdfViewerComponent.prototype.removeAllChildNodes = function (element) {
