@@ -28,7 +28,8 @@
     "node_modules",
     "dist",
     "build",
-    "aot"
+    "aot",
+    "ionic-sample-app"
   ],
   "angularCompilerOptions": {
     "genDir": "aot",

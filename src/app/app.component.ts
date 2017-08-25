@@ -33,6 +33,8 @@ export class AppComponent {
   renderText: boolean = true;
   progressData: PDFProgressData;
   isLoaded: boolean = false;
+  touchPan = true;
+  pinchZoom = true;
 
   incrementPage(amount: number) {
     this.page += amount;
