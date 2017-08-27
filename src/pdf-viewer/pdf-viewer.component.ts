@@ -134,7 +134,7 @@ export class PdfViewerComponent implements OnChanges {
       return;
     }
 
-    let loadingTask: any = PDFJS.getDocument(this.src);
+    let loadingTask: any = PDFJS.getDocument(this.src as any);
 
     loadingTask.onProgress = (progressData: PDFProgressData) => {
       this.onProgress.emit(progressData);
