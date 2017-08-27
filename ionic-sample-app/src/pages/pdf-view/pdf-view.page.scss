@@ -1,0 +1,10 @@
+pdf-view-page {
+    ion-spinner {
+        display: block;
+        margin: auto;
+    }
+
+    .no-scroll .scroll-content {
+        overflow: hidden;
+    }
+}

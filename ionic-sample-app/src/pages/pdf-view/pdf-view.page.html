@@ -1,0 +1,32 @@
+<ion-header>
+    <ion-navbar color="dark">
+        <ion-title class="navbar-title">
+            PDF Demo Page
+        </ion-title>
+    </ion-navbar>
+</ion-header>
+<ion-content class="no-scroll" style="background-color:#fafafa;">
+    <div class="document-header-row" text-center style="height:5em">
+        <h2> Demo PDF </h2>
+    </div>
+    <div class="pdf-container">
+        <ion-spinner color="primary" *ngIf="pdfLoading"></ion-spinner>
+        <pdf-viewer *ngIf="pdfSrc" pinchZoom="true" touchPan="true" [src]="pdfSrc" [page]="currentPage" [original-size]="false" style="display: block;" (after-load-complete)="onDocumentLoadComplete($event)"></pdf-viewer>
+    </div>
+</ion-content>
+<ion-footer>
+    <ion-toolbar *ngIf="showPageControls">
+        <ion-row>
+            <ion-col col-6>
+                <button (click)="previousPage()" full ion-button color="placeholder" icon-only *ngIf="currentPage > 1">
+                    <ion-icon name="arrow-dropleft"></ion-icon>
+                </button>
+            </ion-col>
+            <ion-col col-6>
+                <button (click)="nextPage()" full color="light" ion-button color="placeholder" icon-only *ngIf="(totalPages - currentPage) > 1">
+                    <ion-icon name="arrow-dropright"></ion-icon>
+                </button>            
+            </ion-col>
+        </ion-row>
+    </ion-toolbar>
+</ion-footer>
