@@ -8,7 +8,7 @@ import { MyApp } from './app.component';
 import { PdfViewPage } from '../pages/pdf-view/pdf-view.page';
 import { PdfSelectPage } from '../pages/pdf-select/pdf-select.page'
 
-import { PdfViewerComponent } from '../../../src/pdf-viewer/pdf-viewer.component';
+import { PdfViewerComponent } from '../pdf-viewer.component';
 
 @NgModule({
   declarations: [

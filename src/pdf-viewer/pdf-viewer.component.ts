@@ -5,6 +5,8 @@ import {
   Component, Input, Output, ElementRef, EventEmitter, OnChanges, SimpleChanges
 } from '@angular/core';
 import 'pdfjs-dist/build/pdf.combined';
+import { Content } from 'ionic-angular';
+
 PDFJS.verbosity = (<any>PDFJS).VERBOSITY_LEVELS.errors;
 
 declare var Hammer: any;
@@ -44,7 +46,7 @@ export class PdfViewerComponent implements OnChanges {
   @Output('error') onError = new EventEmitter<any>();
   @Output('on-progress') onProgress = new EventEmitter<PDFProgressData>();
 
-  constructor(private element: ElementRef) { }
+  constructor(private element: ElementRef, private content: Content) { console.log('hello test'); }
 
   @Input()
   src: string | Uint8Array | PDFSource;
@@ -163,7 +165,7 @@ export class PdfViewerComponent implements OnChanges {
       this.renderPage(this._page).then(_ => {
         if (this._pinchZoom || this._touchPan) {
           let page = document.querySelector('.page');
-          this.setTouchHandlers(page as any);
+          this.setTouchHandlers(page as any, this.content);
         }
       });
     } else {
@@ -227,7 +229,7 @@ export class PdfViewerComponent implements OnChanges {
     }
   }
 
-  private setTouchHandlers(elm) {
+  private setTouchHandlers(elm, content) {
     const hammer = new Hammer(elm);
     if (this._pinchZoom) {
       hammer.get('pinch').set({ enable: true });
@@ -239,6 +241,8 @@ export class PdfViewerComponent implements OnChanges {
     let position = getAbsoluteXY(elm);
     const original_x = elm.clientWidth;
     const original_y = elm.clientHeight;
+    const doc_y_scale = original_y / (content.contentHeight - position.y);
+    const doc_y_offset = Math.max(0, original_y - (content.contentHeight - position.y));
     let max_x = original_x;
     let max_y = original_y;
     let min_x = 0;
@@ -364,7 +368,7 @@ export class PdfViewerComponent implements OnChanges {
     }
     var satDelta = function (max, scale, delta) {
       // max translation from center = (+/-) scaled dimension / 2
-      var maxDelta = max * (scale - 1) / 2;
+      var maxDelta = max * (scale - 1) / 2; // scaled size - visible pixels
       var satDelta = delta;
       satDelta = Math.min(satDelta, maxDelta);
       satDelta = Math.max(satDelta, -maxDelta);
@@ -372,10 +376,17 @@ export class PdfViewerComponent implements OnChanges {
     };
     // xx && yy are for resetting the position when the scale return to 1.
     function transform(xx?: number, yy?: number, panEv?) {
-      if (panEv && scale > 1) {
+      if (panEv && (scale > 1 || doc_y_scale > 1)) {
         currentDeltaX = adjustDeltaX + panEv.deltaX;
         currentDeltaY = adjustDeltaY + panEv.deltaY;
+        console.log(`before ${currentDeltaX}px, ${currentDeltaY}px, scale ${scale}`);
         currentDeltaX = satDelta(max_x, scale, currentDeltaX);
+        if (scale > 1 && doc_y_scale < 1) {
+              currentDeltaY = satDelta(max_y, scale, currentDeltaY);
+          } else {
+              const y_offset = doc_y_offset / 2;
+              currentDeltaY = satDelta(max_y / doc_y_scale, scale * doc_y_scale, currentDeltaY + y_offset ) - y_offset;
+          }
         currentDeltaY = satDelta(max_y, scale, currentDeltaY);
       }
       //console.log(`translate ${currentDeltaX}px, ${currentDeltaY}px, scale ${scale}`)
