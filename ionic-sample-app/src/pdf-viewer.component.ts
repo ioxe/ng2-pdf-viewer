@@ -46,7 +46,7 @@ import {
     @Output('error') onError = new EventEmitter<any>();
     @Output('on-progress') onProgress = new EventEmitter<PDFProgressData>();
   
-    constructor(private element: ElementRef, private content: Content) { console.log('hello test'); }
+    constructor(private element: ElementRef, private content: Content) { }
   
     @Input()
     src: string | Uint8Array | PDFSource;
@@ -234,15 +234,16 @@ import {
       if (this._pinchZoom) {
         hammer.get('pinch').set({ enable: true });
         hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
-      }
-      if (this.touchPan) {
+      } else if (this.touchPan) {
         hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
       }
       let position = getAbsoluteXY(elm);
       const original_x = elm.clientWidth;
       const original_y = elm.clientHeight;
       const doc_y_scale = original_y / (content.contentHeight - position.y);
+      // console.log('doc y scale', doc_y_scale);
       const doc_y_offset = Math.max(0, original_y - (content.contentHeight - position.y));
+      // console.log('doc y offset', doc_y_offset);
       let max_x = original_x;
       let max_y = original_y;
       let min_x = 0;
@@ -281,7 +282,7 @@ import {
   
       function onPan(ev) {
         if (lastPinch) {
-          console.log(`checking ${lastPinch}`);
+          // console.log(`checking ${lastPinch}`);
           let now = new Date();
           if (now.getMilliseconds() - lastPinch.getMilliseconds() < 120) {
             return;
@@ -294,7 +295,7 @@ import {
       }
       function onPanend(ev) {
         if (lastPinch) {
-          console.log(`checking ${lastPinch}`);
+          // console.log(`checking ${lastPinch}`);
           let now = new Date();
           if (now.getMilliseconds() - lastPinch.getMilliseconds() < 120) {
             lastPinch = null;
@@ -312,20 +313,20 @@ import {
         let now = new Date();
   
         if (lastTap && (now.getMilliseconds() - lastTap.getMilliseconds() < 300)) {
-          console.log(`absolute top left ${JSON.stringify(position)}`);
-          console.log(`onTap *${scale} absolute center ${JSON.stringify(ev.center)}`);
+          // console.log(`absolute top left ${JSON.stringify(position)}`);
+          // console.log(`onTap *${scale} absolute center ${JSON.stringify(ev.center)}`);
           if (scale === 1) {
             scale = 2.2;
             base = 2.2;
             // scale * distance from center
             var center = { "x": ev.center.x - position.x, "y": ev.center.y - position.y };
-            console.log(`onTap *${scale} relative center ${JSON.stringify(center)}`);
+            // console.log(`onTap *${scale} relative center ${JSON.stringify(center)}`);
             currentDeltaX = satDelta(max_x, scale, (max_x / 2 - center.x) * scale);
             currentDeltaY = satDelta(max_y, scale, (max_y / 2 - center.y) * scale);
-            console.log(`viewport size ${original_x}, ${original_y}`);
-            console.log(`content size ${elm.clientWidth}, ${elm.clientHeight}`);
-            console.log(`distance from svg center ${(max_x / 2 - center.x)}, ${max_y / 2 - center.y}`);
-            console.log(`scaled distance ${(max_x / 2 - center.x) * scale}, ${(max_y / 2 - center.y) * scale}`);
+            // console.log(`viewport size ${original_x}, ${original_y}`);
+            // console.log(`content size ${elm.clientWidth}, ${elm.clientHeight}`);
+            // console.log(`distance from svg center ${(max_x / 2 - center.x)}, ${max_y / 2 - center.y}`);
+            // console.log(`scaled distance ${(max_x / 2 - center.x) * scale}, ${(max_y / 2 - center.y) * scale}`);
           } else {
             scale = 1;
             base = 1;
@@ -343,12 +344,12 @@ import {
         }
       }
       function onPinch(ev) {
-        console.log(`onPinch *${ev.scale} ${ev.deltaX}dx ${ev.deltaY}dy center ${JSON.stringify(ev.center)}`);
+        // console.log(`onPinch *${ev.scale} ${ev.deltaX}dx ${ev.deltaY}dy center ${JSON.stringify(ev.center)}`);
         scale = base + (ev.scale * scale - scale) / scale;
         transform();
       }
       function onPinchend(ev) {
-        console.log(`onPinchend *${ev.scale} ${ev.deltaX}dx ${ev.deltaY}dy center ${JSON.stringify(ev.center)}`);
+        // console.log(`onPinchend *${ev.scale} ${ev.deltaX}dx ${ev.deltaY}dy center ${JSON.stringify(ev.center)}`);
         if (scale > 4) {
           scale = 4;
         }
@@ -379,7 +380,7 @@ import {
         if (panEv && (scale > 1 || doc_y_scale > 1)) {
           currentDeltaX = adjustDeltaX + panEv.deltaX;
           currentDeltaY = adjustDeltaY + panEv.deltaY;
-          console.log(`before ${currentDeltaX}px, ${currentDeltaY}px, scale ${scale}`);
+          // console.log(`before ${currentDeltaX}px, ${currentDeltaY}px, scale ${scale}`);
           currentDeltaX = satDelta(max_x, scale, currentDeltaX);
           if (scale > 1 && doc_y_scale < 1) {
                 currentDeltaY = satDelta(max_y, scale, currentDeltaY);
@@ -387,7 +388,6 @@ import {
                 const y_offset = doc_y_offset / 2;
                 currentDeltaY = satDelta(max_y / doc_y_scale, scale * doc_y_scale, currentDeltaY + y_offset ) - y_offset;
             }
-          currentDeltaY = satDelta(max_y, scale, currentDeltaY);
         }
         //console.log(`translate ${currentDeltaX}px, ${currentDeltaY}px, scale ${scale}`)
         elm.style.webkitTransform = `translate3d(${currentDeltaX}px, ${currentDeltaY}px, 0) scale3d(${scale}, ${scale}, 1)`;

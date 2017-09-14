@@ -4,6 +4,10 @@ pdf-view-page {
         margin: auto;
     }
 
+    .pdf-container {
+        overflow:hidden;
+    }
+
     .no-scroll .scroll-content {
         overflow: hidden;
     }

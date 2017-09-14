@@ -3,7 +3,7 @@
     <name>Pdf Demo</name>
     <description>An awesome Ionic/Cordova app.</description>
     <author email="hi@ionicframework" href="http://ionicframework.com/">IoX Engineering</author>
-    <content original-src="index.html" src="http://169.254.49.153:8100" />
+    <content original-src="index.html" src="http://169.254.103.215:8100" />
     <access origin="*" />
     <allow-navigation href="http://ionic.local/*" />
     <allow-intent href="http://*/*" />
@@ -84,6 +84,7 @@
     <allow-navigation href="http://169.254.212.8:8100" />
     <allow-navigation href="http://169.254.80.246:8100" />
     <allow-navigation href="http://169.254.49.153:8100" />
+    <allow-navigation href="http://169.254.103.215:8100" />
     <engine name="android" spec="^6.2.3" />
     <engine name="ios" spec="^4.4.0" />
     <plugin name="cordova-plugin-console" spec="^1.0.7" />

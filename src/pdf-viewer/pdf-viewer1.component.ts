@@ -1,0 +1,1 @@
+ionic-sample-app/src/pdf-viewer/pdf-viewer.component.ts

@@ -44,6 +44,7 @@
   },
   "dependencies": {
     "@types/pdf": "0.0.31",
+    "ionic-angular": "^3.6.0",
     "pdfjs-dist": "^1.8.609"
   },
   "devDependencies": {

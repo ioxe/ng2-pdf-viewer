@@ -46,7 +46,7 @@ export class PdfViewerComponent implements OnChanges {
   @Output('error') onError = new EventEmitter<any>();
   @Output('on-progress') onProgress = new EventEmitter<PDFProgressData>();
 
-  constructor(private element: ElementRef, private content: Content) { console.log('hello test'); }
+  constructor(private element: ElementRef, private content: Content) { console.log('ok'); }
 
   @Input()
   src: string | Uint8Array | PDFSource;
