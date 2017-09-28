@@ -46,7 +46,7 @@ export class PdfViewerComponent implements OnChanges {
   @Output('error') onError = new EventEmitter<any>();
   @Output('on-progress') onProgress = new EventEmitter<PDFProgressData>();
 
-  constructor(private element: ElementRef, private content: Content) { console.log('hello test'); }
+  constructor(private element: ElementRef, private content: Content) { console.log('ok'); }
 
   @Input()
   src: string | Uint8Array | PDFSource;
@@ -194,34 +194,141 @@ export class PdfViewerComponent implements OnChanges {
     return this._pdf.numPages >= page && page >= 1;
   }
 
-  private renderPage(pageNumber: number): PDFPromise<void> {
-    return this._pdf.getPage(pageNumber).then((page: PDFPageProxy) => {
-      let viewport = page.getViewport(this._zoom, this._rotation);
-      let container = this.element.nativeElement.querySelector('div');
+  // private renderPage(pageNumber: number): PDFPromise<void> {
 
+  // return this._pdf.getPage(pageNumber).then((page: PDFPageProxy) => {
+  //   let viewport = page.getViewport(this._zoom, this._rotation);
+  //   let container = this.element.nativeElement.querySelector('div');
+
+  //   if (!this._originalSize) {
+  //     viewport = page.getViewport(this.element.nativeElement.offsetWidth / viewport.width, this._rotation);
+  //   }
+
+  //   if (!this._showAll) {
+  //     this.removeAllChildNodes(container);
+  //   }
+
+  // return (<any>page).getOperatorList().then(function (opList) {
+  //   let svgGfx = new (<any>PDFJS).SVGGraphics((<any>page).commonObjs, (<any>page).objs);
+
+  //   return svgGfx.getSVG(opList, viewport).then(function (svg) {
+  //     let $div = document.createElement('div');
+
+  //     $div.classList.add('page');
+  //     $div.setAttribute('data-page-number', `${page.pageNumber}`);
+
+  //     $div.appendChild(svg);
+  //     container.appendChild($div);
+  //   });
+  // });
+  // });
+  // }
+
+  private renderPage(pageNumber: number) {
+    return this._pdf.getPage(pageNumber).then(page => {
+      var viewport = page.getViewport(this._zoom, this._rotation);
+      var container = this.element.nativeElement.querySelector('div');
+      var canvas = document.createElement('canvas');
+      var div = document.createElement('div');
       if (!this._originalSize) {
         viewport = page.getViewport(this.element.nativeElement.offsetWidth / viewport.width, this._rotation);
       }
-
       if (!this._showAll) {
         this.removeAllChildNodes(container);
       }
 
-      return (<any>page).getOperatorList().then(function (opList) {
-        let svgGfx = new (<any>PDFJS).SVGGraphics((<any>page).commonObjs, (<any>page).objs);
+      // SVG rendering by PDF.js
+      var context = canvas.getContext('2d');
+      let outputScale = this.getOutputScale(context);
+      outputScale.sx *= viewport.width / viewport.width;
+      outputScale.sy *= viewport.height / viewport.height;
+      outputScale.scaled = true;
+      context.scale(5, 5);
+      let sfx = this.approximateFraction(outputScale.sx);
+      let sfy = this.approximateFraction(outputScale.sy);
 
-        return svgGfx.getSVG(opList, viewport).then(function (svg) {
-          let $div = document.createElement('div');
-
-          $div.classList.add('page');
-          $div.setAttribute('data-page-number', `${page.pageNumber}`);
-
-          $div.appendChild(svg);
-          container.appendChild($div);
-        });
-      });
+      canvas.width = this.roundToDivide(viewport.width * outputScale.sx, sfx[0]);
+      canvas.height = this.roundToDivide(viewport.height * outputScale.sy, sfy[0]);
+      canvas.style.width = this.roundToDivide(viewport.width, sfx[1]) + 'px';
+      canvas.style.height = this.roundToDivide(viewport.height, sfy[1]) + 'px';
+      canvas.setAttribute('pinchzoom', '');
+      container.appendChild(canvas);
+      container.style.width = viewport.width;
+      container.style.height = viewport.height;
+      container.appendChild(div);
+      // Rendering area
+      let transform = !outputScale.scaled ? null :
+        [outputScale.sx, 0, 0, outputScale.sy, 0, 0];
+      let renderContext = {
+        canvasContext: context,
+        transform,
+        viewport: viewport
+      };
+      return page.render(renderContext);
     });
   }
+
+  private roundToDivide(x, div) {
+    let r = x % div;
+    return r === 0 ? x : Math.round(x - r + div);
+  }
+
+  private approximateFraction(x) {
+    // Fast paths for int numbers or their inversions.
+    if (Math.floor(x) === x) {
+      return [x, 1];
+    }
+    let xinv = 1 / x;
+    let limit = 8;
+    if (xinv > limit) {
+      return [1, limit];
+    } else if (Math.floor(xinv) === xinv) {
+      return [1, xinv];
+    }
+
+    let x_ = x > 1 ? xinv : x;
+    // a/b and c/d are neighbours in Farey sequence.
+    let a = 0, b = 1, c = 1, d = 1;
+    // Limiting search to order 8.
+    while (true) {
+      // Generating next term in sequence (order of q).
+      let p = a + c, q = b + d;
+      if (q > limit) {
+        break;
+      }
+      if (x_ <= p / q) {
+        c = p; d = q;
+      } else {
+        a = p; b = q;
+      }
+    }
+    let result;
+    // Select closest of the neighbours to x.
+    if (x_ - a / b < c / d - x_) {
+      result = x_ === x ? [a, b] : [b, a];
+    } else {
+      result = x_ === x ? [c, d] : [d, c];
+    }
+    return result;
+  }
+
+  getOutputScale(ctx) {
+    let devicePixelRatio = window.devicePixelRatio || 1;
+    let backingStoreRatio = ctx.webkitBackingStorePixelRatio ||
+      ctx.mozBackingStorePixelRatio ||
+      ctx.msBackingStorePixelRatio ||
+      ctx.oBackingStorePixelRatio ||
+      ctx.backingStorePixelRatio || 1;
+    let pixelRatio = devicePixelRatio / backingStoreRatio;
+    return {
+      sx: pixelRatio,
+      sy: pixelRatio,
+      scaled: pixelRatio !== 1,
+    };
+  }
+
+
+
 
   private removeAllChildNodes(element: HTMLElement) {
     while (element.firstChild) {
@@ -382,11 +489,11 @@ export class PdfViewerComponent implements OnChanges {
         console.log(`before ${currentDeltaX}px, ${currentDeltaY}px, scale ${scale}`);
         currentDeltaX = satDelta(max_x, scale, currentDeltaX);
         if (scale > 1 && doc_y_scale < 1) {
-              currentDeltaY = satDelta(max_y, scale, currentDeltaY);
-          } else {
-              const y_offset = doc_y_offset / 2;
-              currentDeltaY = satDelta(max_y / doc_y_scale, scale * doc_y_scale, currentDeltaY + y_offset ) - y_offset;
-          }
+          currentDeltaY = satDelta(max_y, scale, currentDeltaY);
+        } else {
+          const y_offset = doc_y_offset / 2;
+          currentDeltaY = satDelta(max_y / doc_y_scale, scale * doc_y_scale, currentDeltaY + y_offset) - y_offset;
+        }
         currentDeltaY = satDelta(max_y, scale, currentDeltaY);
       }
       //console.log(`translate ${currentDeltaX}px, ${currentDeltaY}px, scale ${scale}`)

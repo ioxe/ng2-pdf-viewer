@@ -10,7 +10,7 @@ export class PdfViewPage {
     totalPages: number;
     pdfLoading: boolean;
     showPageControls: boolean;
-    pdfSrc: any = 'https://s3-us-west-2.amazonaws.com/timios-dev/PDF/uwm-trid-guide.pdf';
+    pdfSrc: any = 'https://s3-us-west-2.amazonaws.com/timios-dev/PDF/TestApps.PDF';
 
     constructor(
         private navParams: NavParams,

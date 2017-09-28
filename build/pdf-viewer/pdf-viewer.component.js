@@ -2,10 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = require("@angular/core");
 require("pdfjs-dist/build/pdf.combined");
+var ionic_angular_1 = require("ionic-angular");
 PDFJS.verbosity = PDFJS.VERBOSITY_LEVELS.errors;
 var PdfViewerComponent = (function () {
-    function PdfViewerComponent(element) {
+    function PdfViewerComponent(element, content) {
         this.element = element;
+        this.content = content;
         this._showAll = false;
         this._renderText = true;
         this._originalSize = true;
@@ -16,6 +18,7 @@ var PdfViewerComponent = (function () {
         this.onError = new core_1.EventEmitter();
         this.onProgress = new core_1.EventEmitter();
         this.pageChange = new core_1.EventEmitter(true);
+        console.log('ok');
     }
     Object.defineProperty(PdfViewerComponent.prototype, "page", {
         set: function (_page) {
@@ -74,6 +77,20 @@ var PdfViewerComponent = (function () {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(PdfViewerComponent.prototype, "pinchZoom", {
+        set: function (value) {
+            this._pinchZoom = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(PdfViewerComponent.prototype, "touchPan", {
+        set: function (value) {
+            this._touchPan = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
     PdfViewerComponent.prototype.ngOnChanges = function (changes) {
         if ('src' in changes) {
             this.loadPDF();
@@ -114,8 +131,14 @@ var PdfViewerComponent = (function () {
         this.render();
     };
     PdfViewerComponent.prototype.render = function () {
+        var _this = this;
         if (!this._showAll) {
-            this.renderPage(this._page);
+            this.renderPage(this._page).then(function (_) {
+                if (_this._pinchZoom || _this._touchPan) {
+                    var page = document.querySelector('.page');
+                    _this.setTouchHandlers(page, _this.content);
+                }
+            });
         }
         else {
             this.renderMultiplePages();
@@ -142,27 +165,253 @@ var PdfViewerComponent = (function () {
         return this._pdf.getPage(pageNumber).then(function (page) {
             var viewport = page.getViewport(_this._zoom, _this._rotation);
             var container = _this.element.nativeElement.querySelector('div');
+            var canvas = document.createElement('canvas');
+            var div = document.createElement('div');
             if (!_this._originalSize) {
                 viewport = page.getViewport(_this.element.nativeElement.offsetWidth / viewport.width, _this._rotation);
             }
             if (!_this._showAll) {
                 _this.removeAllChildNodes(container);
             }
-            return page.getOperatorList().then(function (opList) {
-                var svgGfx = new PDFJS.SVGGraphics(page.commonObjs, page.objs);
-                return svgGfx.getSVG(opList, viewport).then(function (svg) {
-                    var $div = document.createElement('div');
-                    $div.classList.add('page');
-                    $div.setAttribute('data-page-number', "" + page.pageNumber);
-                    $div.appendChild(svg);
-                    container.appendChild($div);
-                });
-            });
+            var context = canvas.getContext('2d');
+            var outputScale = _this.getOutputScale(context);
+            outputScale.sx *= viewport.width / viewport.width;
+            outputScale.sy *= viewport.height / viewport.height;
+            outputScale.scaled = true;
+            context.scale(5, 5);
+            var sfx = _this.approximateFraction(outputScale.sx);
+            var sfy = _this.approximateFraction(outputScale.sy);
+            canvas.width = _this.roundToDivide(viewport.width * outputScale.sx, sfx[0]);
+            canvas.height = _this.roundToDivide(viewport.height * outputScale.sy, sfy[0]);
+            canvas.style.width = _this.roundToDivide(viewport.width, sfx[1]) + 'px';
+            canvas.style.height = _this.roundToDivide(viewport.height, sfy[1]) + 'px';
+            canvas.setAttribute('pinchzoom', '');
+            container.appendChild(canvas);
+            container.style.width = viewport.width;
+            container.style.height = viewport.height;
+            container.appendChild(div);
+            var transform = !outputScale.scaled ? null :
+                [outputScale.sx, 0, 0, outputScale.sy, 0, 0];
+            var renderContext = {
+                canvasContext: context,
+                transform: transform,
+                viewport: viewport
+            };
+            return page.render(renderContext);
         });
+    };
+    PdfViewerComponent.prototype.roundToDivide = function (x, div) {
+        var r = x % div;
+        return r === 0 ? x : Math.round(x - r + div);
+    };
+    PdfViewerComponent.prototype.approximateFraction = function (x) {
+        if (Math.floor(x) === x) {
+            return [x, 1];
+        }
+        var xinv = 1 / x;
+        var limit = 8;
+        if (xinv > limit) {
+            return [1, limit];
+        }
+        else if (Math.floor(xinv) === xinv) {
+            return [1, xinv];
+        }
+        var x_ = x > 1 ? xinv : x;
+        var a = 0, b = 1, c = 1, d = 1;
+        while (true) {
+            var p = a + c, q = b + d;
+            if (q > limit) {
+                break;
+            }
+            if (x_ <= p / q) {
+                c = p;
+                d = q;
+            }
+            else {
+                a = p;
+                b = q;
+            }
+        }
+        var result;
+        if (x_ - a / b < c / d - x_) {
+            result = x_ === x ? [a, b] : [b, a];
+        }
+        else {
+            result = x_ === x ? [c, d] : [d, c];
+        }
+        return result;
+    };
+    PdfViewerComponent.prototype.getOutputScale = function (ctx) {
+        var devicePixelRatio = window.devicePixelRatio || 1;
+        var backingStoreRatio = ctx.webkitBackingStorePixelRatio ||
+            ctx.mozBackingStorePixelRatio ||
+            ctx.msBackingStorePixelRatio ||
+            ctx.oBackingStorePixelRatio ||
+            ctx.backingStorePixelRatio || 1;
+        var pixelRatio = devicePixelRatio / backingStoreRatio;
+        return {
+            sx: pixelRatio,
+            sy: pixelRatio,
+            scaled: pixelRatio !== 1,
+        };
     };
     PdfViewerComponent.prototype.removeAllChildNodes = function (element) {
         while (element.firstChild) {
             element.removeChild(element.firstChild);
+        }
+    };
+    PdfViewerComponent.prototype.setTouchHandlers = function (elm, content) {
+        var hammer = new Hammer(elm);
+        if (this._pinchZoom) {
+            hammer.get('pinch').set({ enable: true });
+            hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
+        }
+        if (this.touchPan) {
+            hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
+        }
+        var position = getAbsoluteXY(elm);
+        var original_x = elm.clientWidth;
+        var original_y = elm.clientHeight;
+        var doc_y_scale = original_y / (content.contentHeight - position.y);
+        var doc_y_offset = Math.max(0, original_y - (content.contentHeight - position.y));
+        var max_x = original_x;
+        var max_y = original_y;
+        var min_x = 0;
+        var min_y = 0;
+        var x = 0;
+        var y = 0;
+        var last_x = 0;
+        var last_y = 0;
+        var scale = 1;
+        var base = scale;
+        var adjustDeltaX = 0;
+        var adjustDeltaY = 0;
+        var currentDeltaX = 0;
+        var currentDeltaY = 0;
+        var lastTap = null;
+        var lastPinch = null;
+        hammer.on('pan', onPan);
+        hammer.on('panend', onPanend);
+        hammer.on('pancancel', onPanend);
+        hammer.on('tap', onTap);
+        hammer.on('pinch', onPinch);
+        hammer.on('pinchend', onPinchend);
+        hammer.on('pinchcancel', onPinchend);
+        function getAbsoluteXY(element) {
+            var viewportElement = document.documentElement;
+            var box = element.getBoundingClientRect();
+            var scrollLeft = viewportElement.scrollLeft;
+            var scrollTop = viewportElement.scrollTop;
+            var x = box.left + scrollLeft;
+            var y = box.top + scrollTop;
+            return { "x": x, "y": y };
+        }
+        function onPan(ev) {
+            if (lastPinch) {
+                console.log("checking " + lastPinch);
+                var now = new Date();
+                if (now.getMilliseconds() - lastPinch.getMilliseconds() < 120) {
+                    return;
+                }
+                else {
+                    lastPinch = null;
+                }
+            }
+            transform(null, null, ev);
+        }
+        function onPanend(ev) {
+            if (lastPinch) {
+                console.log("checking " + lastPinch);
+                var now = new Date();
+                if (now.getMilliseconds() - lastPinch.getMilliseconds() < 120) {
+                    lastPinch = null;
+                    return;
+                }
+            }
+            last_x = x;
+            last_y = y;
+            adjustDeltaX = currentDeltaX;
+            adjustDeltaY = currentDeltaY;
+        }
+        function onTap(ev) {
+            var now = new Date();
+            if (lastTap && (now.getMilliseconds() - lastTap.getMilliseconds() < 300)) {
+                console.log("absolute top left " + JSON.stringify(position));
+                console.log("onTap *" + scale + " absolute center " + JSON.stringify(ev.center));
+                if (scale === 1) {
+                    scale = 2.2;
+                    base = 2.2;
+                    var center = { "x": ev.center.x - position.x, "y": ev.center.y - position.y };
+                    console.log("onTap *" + scale + " relative center " + JSON.stringify(center));
+                    currentDeltaX = satDelta(max_x, scale, (max_x / 2 - center.x) * scale);
+                    currentDeltaY = satDelta(max_y, scale, (max_y / 2 - center.y) * scale);
+                    console.log("viewport size " + original_x + ", " + original_y);
+                    console.log("content size " + elm.clientWidth + ", " + elm.clientHeight);
+                    console.log("distance from svg center " + (max_x / 2 - center.x) + ", " + (max_y / 2 - center.y));
+                    console.log("scaled distance " + (max_x / 2 - center.x) * scale + ", " + (max_y / 2 - center.y) * scale);
+                }
+                else {
+                    scale = 1;
+                    base = 1;
+                    currentDeltaX = 0;
+                    currentDeltaY = 0;
+                    adjustDeltaX = 0;
+                    adjustDeltaY = 0;
+                }
+                transform(max_x / 2, max_y / 2);
+                adjustDeltaX = currentDeltaX;
+                adjustDeltaY = currentDeltaY;
+                lastTap = null;
+            }
+            else {
+                lastTap = new Date();
+            }
+        }
+        function onPinch(ev) {
+            console.log("onPinch *" + ev.scale + " " + ev.deltaX + "dx " + ev.deltaY + "dy center " + JSON.stringify(ev.center));
+            scale = base + (ev.scale * scale - scale) / scale;
+            transform();
+        }
+        function onPinchend(ev) {
+            console.log("onPinchend *" + ev.scale + " " + ev.deltaX + "dx " + ev.deltaY + "dy center " + JSON.stringify(ev.center));
+            if (scale > 4) {
+                scale = 4;
+            }
+            if (scale < 1) {
+                scale = 1;
+                scale = 1;
+                base = 1;
+                currentDeltaX = 0;
+                currentDeltaY = 0;
+                transform(max_x / 2, max_y / 2);
+            }
+            base = scale;
+            transform();
+            lastPinch = new Date();
+        }
+        var satDelta = function (max, scale, delta) {
+            var maxDelta = max * (scale - 1) / 2;
+            var satDelta = delta;
+            satDelta = Math.min(satDelta, maxDelta);
+            satDelta = Math.max(satDelta, -maxDelta);
+            return satDelta;
+        };
+        function transform(xx, yy, panEv) {
+            if (panEv && (scale > 1 || doc_y_scale > 1)) {
+                currentDeltaX = adjustDeltaX + panEv.deltaX;
+                currentDeltaY = adjustDeltaY + panEv.deltaY;
+                console.log("before " + currentDeltaX + "px, " + currentDeltaY + "px, scale " + scale);
+                currentDeltaX = satDelta(max_x, scale, currentDeltaX);
+                if (scale > 1 && doc_y_scale < 1) {
+                    currentDeltaY = satDelta(max_y, scale, currentDeltaY);
+                }
+                else {
+                    var y_offset = doc_y_offset / 2;
+                    currentDeltaY = satDelta(max_y / doc_y_scale, scale * doc_y_scale, currentDeltaY + y_offset) - y_offset;
+                }
+                currentDeltaY = satDelta(max_y, scale, currentDeltaY);
+            }
+            elm.style.webkitTransform = "translate3d(" + currentDeltaX + "px, " + currentDeltaY + "px, 0) scale3d(" + scale + ", " + scale + ", 1)";
         }
     };
     return PdfViewerComponent;
@@ -176,6 +425,7 @@ PdfViewerComponent.decorators = [
 ];
 PdfViewerComponent.ctorParameters = function () { return [
     { type: core_1.ElementRef, },
+    { type: ionic_angular_1.Content, },
 ]; };
 PdfViewerComponent.propDecorators = {
     'afterLoadComplete': [{ type: core_1.Output, args: ['after-load-complete',] },],
@@ -189,6 +439,8 @@ PdfViewerComponent.propDecorators = {
     'showAll': [{ type: core_1.Input, args: ['show-all',] },],
     'zoom': [{ type: core_1.Input, args: ['zoom',] },],
     'rotation': [{ type: core_1.Input, args: ['rotation',] },],
+    'pinchZoom': [{ type: core_1.Input, args: ['pinchZoom',] },],
+    'touchPan': [{ type: core_1.Input, args: ['touchPan',] },],
 };
 exports.PdfViewerComponent = PdfViewerComponent;
 //# sourceMappingURL=pdf-viewer.component.js.map

@@ -11,6 +11,8 @@ var AppComponent = (function () {
         this.showAll = true;
         this.renderText = true;
         this.isLoaded = false;
+        this.touchPan = true;
+        this.pinchZoom = true;
     }
     AppComponent.prototype.incrementPage = function (amount) {
         this.page += amount;
