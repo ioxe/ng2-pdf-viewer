@@ -26,6 +26,7 @@
     },
     "files": [
       "src/pdf-viewer/index",
+      "src/pdf-viewer/pdf-viewer.module.ts",      
       "src/pdf-viewer/pdf-viewer.component.ts"
     ],
     "angularCompilerOptions": {

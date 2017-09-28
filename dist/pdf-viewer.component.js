@@ -2,10 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = require("@angular/core");
 require("pdfjs-dist/build/pdf.combined");
+var ionic_angular_1 = require("ionic-angular");
 PDFJS.verbosity = PDFJS.VERBOSITY_LEVELS.errors;
 var PdfViewerComponent = (function () {
-    function PdfViewerComponent(element) {
+    function PdfViewerComponent(element, content) {
         this.element = element;
+        this.content = content;
         this._showAll = false;
         this._renderText = true;
         this._originalSize = true;
@@ -16,6 +18,7 @@ var PdfViewerComponent = (function () {
         this.onError = new core_1.EventEmitter();
         this.onProgress = new core_1.EventEmitter();
         this.pageChange = new core_1.EventEmitter(true);
+        console.log('ok');
     }
     Object.defineProperty(PdfViewerComponent.prototype, "page", {
         set: function (_page) {
@@ -133,7 +136,7 @@ var PdfViewerComponent = (function () {
             this.renderPage(this._page).then(function (_) {
                 if (_this._pinchZoom || _this._touchPan) {
                     var page = document.querySelector('.page');
-                    _this.setTouchHandlers(page);
+                    _this.setTouchHandlers(page, _this.content);
                 }
             });
         }
@@ -162,30 +165,102 @@ var PdfViewerComponent = (function () {
         return this._pdf.getPage(pageNumber).then(function (page) {
             var viewport = page.getViewport(_this._zoom, _this._rotation);
             var container = _this.element.nativeElement.querySelector('div');
+            var canvas = document.createElement('canvas');
+            var div = document.createElement('div');
             if (!_this._originalSize) {
                 viewport = page.getViewport(_this.element.nativeElement.offsetWidth / viewport.width, _this._rotation);
             }
             if (!_this._showAll) {
                 _this.removeAllChildNodes(container);
             }
-            return page.getOperatorList().then(function (opList) {
-                var svgGfx = new PDFJS.SVGGraphics(page.commonObjs, page.objs);
-                return svgGfx.getSVG(opList, viewport).then(function (svg) {
-                    var $div = document.createElement('div');
-                    $div.classList.add('page');
-                    $div.setAttribute('data-page-number', "" + page.pageNumber);
-                    $div.appendChild(svg);
-                    container.appendChild($div);
-                });
-            });
+            var context = canvas.getContext('2d');
+            var outputScale = _this.getOutputScale(context);
+            outputScale.sx *= viewport.width / viewport.width;
+            outputScale.sy *= viewport.height / viewport.height;
+            outputScale.scaled = true;
+            context.scale(5, 5);
+            var sfx = _this.approximateFraction(outputScale.sx);
+            var sfy = _this.approximateFraction(outputScale.sy);
+            canvas.width = _this.roundToDivide(viewport.width * outputScale.sx, sfx[0]);
+            canvas.height = _this.roundToDivide(viewport.height * outputScale.sy, sfy[0]);
+            canvas.style.width = _this.roundToDivide(viewport.width, sfx[1]) + 'px';
+            canvas.style.height = _this.roundToDivide(viewport.height, sfy[1]) + 'px';
+            canvas.setAttribute('pinchzoom', '');
+            container.appendChild(canvas);
+            container.style.width = viewport.width;
+            container.style.height = viewport.height;
+            container.appendChild(div);
+            var transform = !outputScale.scaled ? null :
+                [outputScale.sx, 0, 0, outputScale.sy, 0, 0];
+            var renderContext = {
+                canvasContext: context,
+                transform: transform,
+                viewport: viewport
+            };
+            return page.render(renderContext);
         });
+    };
+    PdfViewerComponent.prototype.roundToDivide = function (x, div) {
+        var r = x % div;
+        return r === 0 ? x : Math.round(x - r + div);
+    };
+    PdfViewerComponent.prototype.approximateFraction = function (x) {
+        if (Math.floor(x) === x) {
+            return [x, 1];
+        }
+        var xinv = 1 / x;
+        var limit = 8;
+        if (xinv > limit) {
+            return [1, limit];
+        }
+        else if (Math.floor(xinv) === xinv) {
+            return [1, xinv];
+        }
+        var x_ = x > 1 ? xinv : x;
+        var a = 0, b = 1, c = 1, d = 1;
+        while (true) {
+            var p = a + c, q = b + d;
+            if (q > limit) {
+                break;
+            }
+            if (x_ <= p / q) {
+                c = p;
+                d = q;
+            }
+            else {
+                a = p;
+                b = q;
+            }
+        }
+        var result;
+        if (x_ - a / b < c / d - x_) {
+            result = x_ === x ? [a, b] : [b, a];
+        }
+        else {
+            result = x_ === x ? [c, d] : [d, c];
+        }
+        return result;
+    };
+    PdfViewerComponent.prototype.getOutputScale = function (ctx) {
+        var devicePixelRatio = window.devicePixelRatio || 1;
+        var backingStoreRatio = ctx.webkitBackingStorePixelRatio ||
+            ctx.mozBackingStorePixelRatio ||
+            ctx.msBackingStorePixelRatio ||
+            ctx.oBackingStorePixelRatio ||
+            ctx.backingStorePixelRatio || 1;
+        var pixelRatio = devicePixelRatio / backingStoreRatio;
+        return {
+            sx: pixelRatio,
+            sy: pixelRatio,
+            scaled: pixelRatio !== 1,
+        };
     };
     PdfViewerComponent.prototype.removeAllChildNodes = function (element) {
         while (element.firstChild) {
             element.removeChild(element.firstChild);
         }
     };
-    PdfViewerComponent.prototype.setTouchHandlers = function (elm) {
+    PdfViewerComponent.prototype.setTouchHandlers = function (elm, content) {
         var hammer = new Hammer(elm);
         if (this._pinchZoom) {
             hammer.get('pinch').set({ enable: true });
@@ -197,6 +272,8 @@ var PdfViewerComponent = (function () {
         var position = getAbsoluteXY(elm);
         var original_x = elm.clientWidth;
         var original_y = elm.clientHeight;
+        var doc_y_scale = original_y / (content.contentHeight - position.y);
+        var doc_y_offset = Math.max(0, original_y - (content.contentHeight - position.y));
         var max_x = original_x;
         var max_y = original_y;
         var min_x = 0;
@@ -320,10 +397,18 @@ var PdfViewerComponent = (function () {
             return satDelta;
         };
         function transform(xx, yy, panEv) {
-            if (panEv && scale > 1) {
+            if (panEv && (scale > 1 || doc_y_scale > 1)) {
                 currentDeltaX = adjustDeltaX + panEv.deltaX;
                 currentDeltaY = adjustDeltaY + panEv.deltaY;
+                console.log("before " + currentDeltaX + "px, " + currentDeltaY + "px, scale " + scale);
                 currentDeltaX = satDelta(max_x, scale, currentDeltaX);
+                if (scale > 1 && doc_y_scale < 1) {
+                    currentDeltaY = satDelta(max_y, scale, currentDeltaY);
+                }
+                else {
+                    var y_offset = doc_y_offset / 2;
+                    currentDeltaY = satDelta(max_y / doc_y_scale, scale * doc_y_scale, currentDeltaY + y_offset) - y_offset;
+                }
                 currentDeltaY = satDelta(max_y, scale, currentDeltaY);
             }
             elm.style.webkitTransform = "translate3d(" + currentDeltaX + "px, " + currentDeltaY + "px, 0) scale3d(" + scale + ", " + scale + ", 1)";
@@ -340,6 +425,7 @@ PdfViewerComponent.decorators = [
 ];
 PdfViewerComponent.ctorParameters = function () { return [
     { type: core_1.ElementRef, },
+    { type: ionic_angular_1.Content, },
 ]; };
 PdfViewerComponent.propDecorators = {
     'afterLoadComplete': [{ type: core_1.Output, args: ['after-load-complete',] },],

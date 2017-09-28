@@ -1,8 +1,10 @@
 /// <reference types="pdf" />
 import { ElementRef, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import 'pdfjs-dist/build/pdf.combined';
+import { Content } from 'ionic-angular';
 export declare class PdfViewerComponent implements OnChanges {
     private element;
+    private content;
     private _showAll;
     private _renderText;
     private _originalSize;
@@ -16,7 +18,7 @@ export declare class PdfViewerComponent implements OnChanges {
     afterLoadComplete: EventEmitter<PDFDocumentProxy>;
     onError: EventEmitter<any>;
     onProgress: EventEmitter<PDFProgressData>;
-    constructor(element: ElementRef);
+    constructor(element: ElementRef, content: Content);
     src: string | Uint8Array | PDFSource;
     page: any;
     pageChange: EventEmitter<number>;
@@ -35,6 +37,13 @@ export declare class PdfViewerComponent implements OnChanges {
     private renderMultiplePages();
     private isValidPageNumber(page);
     private renderPage(pageNumber);
+    private roundToDivide(x, div);
+    private approximateFraction(x);
+    getOutputScale(ctx: any): {
+        sx: number;
+        sy: number;
+        scaled: boolean;
+    };
     private removeAllChildNodes(element);
-    private setTouchHandlers(elm);
+    private setTouchHandlers(elm, content);
 }

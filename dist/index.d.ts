@@ -1,1 +1,1 @@
-export { PdfViewerComponent } from './pdf-viewer.component';
+export { PdfViewerModule } from './pdf-viewer.module';
