@@ -251,10 +251,11 @@ export class PdfViewerComponent implements OnChanges {
       canvas.height = this.roundToDivide(viewport.height * outputScale.sy, sfy[0]);
       canvas.style.width = this.roundToDivide(viewport.width, sfx[1]) + 'px';
       canvas.style.height = this.roundToDivide(viewport.height, sfy[1]) + 'px';
-      canvas.setAttribute('pinchzoom', '');
       container.appendChild(canvas);
       container.style.width = viewport.width;
       container.style.height = viewport.height;
+      canvas.classList.add('page');
+      canvas.setAttribute('data-page-number', `${page.pageNumber}`);
       container.appendChild(div);
       // Rendering area
       let transform = !outputScale.scaled ? null :

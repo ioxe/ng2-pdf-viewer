@@ -185,10 +185,11 @@ var PdfViewerComponent = (function () {
             canvas.height = _this.roundToDivide(viewport.height * outputScale.sy, sfy[0]);
             canvas.style.width = _this.roundToDivide(viewport.width, sfx[1]) + 'px';
             canvas.style.height = _this.roundToDivide(viewport.height, sfy[1]) + 'px';
-            canvas.setAttribute('pinchzoom', '');
             container.appendChild(canvas);
             container.style.width = viewport.width;
             container.style.height = viewport.height;
+            canvas.classList.add('page');
+            canvas.setAttribute('data-page-number', "" + page.pageNumber);
             container.appendChild(div);
             var transform = !outputScale.scaled ? null :
                 [outputScale.sx, 0, 0, outputScale.sy, 0, 0];
